@@ -29,7 +29,7 @@ def list_whitepaper_pdfs():
     PAGE_SIZE_CONST = 15
     # Parse the JSON Response
     responseAsJson = json.loads(urlopen(
-        "https://aws.amazon.com/api/dirs/items/search?item.directoryId=whitepapers&sort_by=item.additionalFields.sortDate&sort_order=desc&size="+str(PAGE_SIZE_CONST)+"&item.locale=en_US&tags.id=whitepapers%23content-type%23whitepaper").read().decode('UTF-8'))
+           "https://aws.amazon.com/api/dirs/items/search?item.directoryId=whitepapers&sort_by=item.additionalFields.sortDate&sort_order=desc&size="+str(PAGE_SIZE_CONST)+"&item.locale=en_US&tags.id=GLOBAL%23content-type%23whitepaper").read().decode('UTF-8'))
     # Retreiving metadata json to get the lenght of the witepapers list metadata.count
     maxNumberofDocuments = responseAsJson['metadata']['totalHits']
     print("Number of Whitepapers to be retrieved: " + str(maxNumberofDocuments))
@@ -40,7 +40,7 @@ def list_whitepaper_pdfs():
     print("Generating PDF list (this may take some time)")
     while currentPage < maxPage:
       responseAsJson = json.loads(urlopen(
-        "https://aws.amazon.com/api/dirs/items/search?item.directoryId=whitepapers&sort_by=item.additionalFields.sortDate&sort_order=desc&size="+str(PAGE_SIZE_CONST)+"&item.locale=en_US&tags.id=whitepapers%23content-type%23whitepaper&page="+str(currentPage)).read().decode('UTF-8'))
+        "https://aws.amazon.com/api/dirs/items/search?item.directoryId=whitepapers&sort_by=item.additionalFields.sortDate&sort_order=desc&size="+str(PAGE_SIZE_CONST)+"&item.locale=en_US&tags.id=GLOBAL%23content-type%23whitepaper&page="+str(currentPage)).read().decode('UTF-8'))
       for item in responseAsJson['items']:
         print("URL to be added to pdf list: "+item['item']['additionalFields']['primaryURL'])
         pdfs.add(item['item']['additionalFields']['primaryURL'])
@@ -49,14 +49,14 @@ def list_whitepaper_pdfs():
 
 # Build a list of the amazon builder library PDF's
 def list_builderlibrary_pdfs():
-    # Max paging in json response for whitepaper
+    # Max paging in json response for builderlib whitepaper
     PAGE_SIZE_CONST = 15
     # Parse the JSON Response
     responseAsJson = json.loads(urlopen(
         "https://aws.amazon.com/api/dirs/items/search?item.directoryId=amazon-redwood&sort_by=item.additionalFields.customSort&sort_order=asc&size="+str(PAGE_SIZE_CONST)+"&item.locale=en_US").read().decode('UTF-8'))
-    # Retreiving metadata json to get the lenght of the witepapers list metadata.count
+    # Retreiving metadata json to get the length of the witepapers list metadata.count
     maxNumberofDocuments = responseAsJson['metadata']['totalHits']
-    print("Number of Whitepapers to be retrieved: " + str(maxNumberofDocuments))
+    print("Number of builderlib papers to be retrieved: " + str(maxNumberofDocuments))
     maxPage = maxNumberofDocuments // PAGE_SIZE_CONST + 1
     print("Number of iterations :"+ str(maxPage))
     pdfs = set()
@@ -67,12 +67,13 @@ def list_builderlibrary_pdfs():
         "https://aws.amazon.com/api/dirs/items/search?item.directoryId=amazon-redwood&sort_by=item.additionalFields.customSort&sort_order=asc&size="+str(PAGE_SIZE_CONST)+"&item.locale=en_US&page="+str(currentPage)).read().decode('UTF-8'))
       for item in responseAsJson['items']:
         print("URL to be added to pdf list: "+item['item']['additionalFields']['downloadUrl'])
-        pdfs.add(item['item']['additionalFields']['downloadUrl'])
-      currentPage += 1    
+        try:
+            downloadUrl=item['item']['additionalFields']['downloadUrl']
+        except KeyError:
+            print("Document with no downloadUrl")
+        pdfs.add(downloadUrl)
+        currentPage += 1
     return pdfs
-
-
-
 
 def find_pdfs_in_html(url):
     html_page_doc = urlopen(url)
@@ -183,6 +184,7 @@ def get_pdfs(pdf_list, force):
 
 # Main
 args = get_options()
+pdf_list = set()
 # allow user to overwrite files
 force = args['force']
 if args['documentation']:
@@ -196,7 +198,7 @@ if args['whitepapers']:
     pdf_list = list_whitepaper_pdfs()
     get_pdfs(pdf_list, force)
 if args['builderlibrary']:
-    print("Downloading Builder Lib document")
+    print("Downloading Builder Lib documents")
     pdf_list = list_builderlibrary_pdfs()
     get_pdfs(pdf_list, force)
 for p in pdf_list:
